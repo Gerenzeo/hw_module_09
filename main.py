@@ -1,6 +1,4 @@
-import sys
-
-CONTACTS = []
+CONTACTS = {}
 
 # DECORATOR
 def input_error(func):
@@ -8,94 +6,86 @@ def input_error(func):
         try:
             result = func(*args, **kwargs)
             return result
-        except KeyError:
-            return "No user"
+        except KeyError as e:
+            return f"This user {e} is not exist! Please Add user before using this command!"
         except ValueError:
             return 'Give me name and phone please!'
         except IndexError:
             return 'You enter not corrent name or this name is not exist!'
+        except TypeError:
+            return 'Please enter name and phone!'
     return inner
 
-def command_hello(data=''):
+def command_hello(*args):
     return 'How can I help you?'
 
 @input_error
-def command_add(data=''):
-    name, phone = data.strip().split(' ')
-    if name.title() in list(map(lambda name: name['name'], CONTACTS)):
-        return f'Name {name.title()} already exist! Try another name!'
+def command_add(contacts: dict, name, phone):
+    if name in contacts:
+        return f'Sorry, but {name.title()} is already created! Please enter another name!'
+    contacts[name] = phone
 
-    CONTACTS.append({'name': name.title(), 'phone': phone})
-
-    return f'Contact ({name.title()} {phone}) successfully added!'
+    return f'{name.title()} {phone} successfully added!'
 
 @input_error
-def command_change(data=''):
-    name, phone = data.strip().split(' ')
-    
-    user_index = [index for index, elements in enumerate(CONTACTS) if elements['name'] == name.title()][0]
-    old_phone = CONTACTS[user_index]['phone']
-    CONTACTS[user_index]['phone'] = phone
-
-    return f'For contact {name.title()} you changed phone from ({old_phone}) to ({phone}).'
+def command_change(contacts: dict, name, phone):
+    old_phone = contacts[name]
+    contacts[name] = phone
+    return f'User {name.title()} change number from {old_phone} to {contacts[name]} successfully!'
 
 @input_error
-def command_phone(data=''):
-    if len(CONTACTS) >= 1:
-        user_index = [index for index, elements in enumerate(CONTACTS) if elements['name'] == data.title()][0]
+def command_phone(contacts: dict, name):
+    return f'{name.title()}\'s number: {contacts[name]}'
 
-        return f'Name: {data.title()}\nContact number: {CONTACTS[int(user_index)]["phone"]}'
+def command_show_all(contacts: dict):
+    print(f'{"NAME":<10}{"PHONE":<20}')
+    print(f'{"_"*30}')
+    if len(CONTACTS) < 1:
+        return 'You don\'t have contacts at this moment!'
     
-    return 'You don\'t have a contacts! Please add contact before using this command!'
-
-def command_show_all(data=''):
-    if len(CONTACTS) == 0:
-        return 'You don\'t have a contacts! Please add contact before using this command!'
-    
-    print(f'{" "*5}|{" "*20}|{" "*20}|')
-    print(f'{"№":^5}|{"NAME":^20}|{"PHONE":^20}|')
-    print(f'{"_"*5}|{"_"*20}|{"_"*20}|')
-    for index, elements in enumerate(CONTACTS):
-        index += 1
-        print(f'{" "*5}|{" "*20}|{" "*20}|')
-        print(f'{index:^5}|{elements["name"].title():^20}|{elements["phone"]:^20}|')
-        print(f'{"_"*5}|{"_"*20}|{"_"*20}|')
+    for key, value in contacts.items():
+        print(f'{key.title():<10}{value:<20}')
 
     return ''
 
-def command_good_bye(data=''):
-    return sys.exit('Good bye!')
-
-def command_unknown(data=''):
-    return f'Command [{data}] is not exist!'
+def command_unknown(command):
+    return f'Command [{command}] is not exist!'
 
 COMMANDS = {
     'hello': command_hello,
     'add': command_add,
     'change': command_change,
     'phone': command_phone,
-    'show all': command_show_all,
-    'good bye': command_good_bye,
-    'exit': command_good_bye,
-    'close': command_good_bye
+    'show all': command_show_all
 }
-
-def commands_run(command):
-    current_command = ''.join([c for c in COMMANDS.keys() if command.startswith(c)])
-    if current_command in COMMANDS.keys():
-        current_argument = command[len(current_command):].strip()
-        return COMMANDS[current_command], current_argument
-    else:
-        return command_unknown, command
 
 def main():
     while True:
-        user = input('Enter command: ')
-        if user != '':
-            func, arg = commands_run(user.lower())
-            print(func(arg), '\n')
+        command = input('Enter command: ').lower()
+        if command in ['exit', 'good bye', 'close']:
+            print('Good bye!')
+            break
+        if command:
+            current_command = filter(lambda comanda: command.startswith(comanda), [c for c in COMMANDS.keys()])
+            func = ''
+            
+            try:
+                func = command[:len(list(current_command)[0])]
+            except IndexError:
+                pass
+            
+            if COMMANDS.get(func):
+                handler = COMMANDS.get(func)
+                data = command[len(func):].strip()
+
+                if data:  
+                    data = data.split(' ')
+                result = handler(CONTACTS, *data)
+            else:
+                result = command_unknown(command)  
+            print(result, '\n')
         else:
-            print('Please enter command!', '\n')
+            print('Please write something!', '\n')
 
 if __name__ == '__main__':
     main()
